@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Where did you come from?</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background:
+                radial-gradient(circle at 20% 20%, #242424 0%, transparent 35%),
+                radial-gradient(circle at 80% 80%, #1b1b1b 0%, transparent 35%),
+                #101010;
+
+            color: white;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .container {
+            width: min(90%, 650px);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: clamp(32px, 7vw, 60px);
+            margin: 0 0 20px;
+        }
+
+        .from {
+            color: #8ab4ff;
+            font-weight: bold;
+            word-break: break-word;
+        }
+
+        p {
+            color: #bdbdbd;
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .counter {
+            margin-top: 35px;
+            padding: 18px 25px;
+
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+
+            font-size: 18px;
+        }
+
+        .number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #8ab4ff;
+        }
+
+        .loading {
+            color: #777;
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="container">
+
+        <h1>
+            You came from
+            <span class="from" id="from">somewhere</span>
+        </h1>
+
+        <p>
+            I am <strong>tiboblh</strong> and I'm doing an experiment.
+            <br>
+            I'm testing every way I can think of to get people to go to a website.
+        </p>
+
+        <div class="counter">
+            <div>
+                <span class="number" id="count">...</span>
+            </div>
+
+            <div>
+                person(s) came from the same method.
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        /*
+         * PUT YOUR API URL HERE
+         *
+         * Example:
+         * https://script.google.com/macros/s/XXXXXXXX/exec
+         *
+         * Or your own domain:
+         * https://liengoogle.com
+         */
+        const API_URL = "https://liengoogle.com";
+
+
+        function getFrom() {
+            const params = new URLSearchParams(window.location.search);
+
+            return params.get("from") || "unknown";
+        }
+
+
+        async function sendData(from) {
+            /*
+             * Encode the value so things like:
+             *
+             * ?from=Discord Server
+             * ?from=https://example.com
+             *
+             * don't break the URL.
+             */
+
+            const encodedFrom = encodeURIComponent(from);
+
+            // Add this visitor
+            try {
+                await fetch(`${API_URL}/add?from=${encodedFrom}`, {
+                    method: "GET",
+                    mode: "cors"
+                });
+            } catch (error) {
+                console.error("Could not send visitor:", error);
+            }
+
+
+            // Get the number of people using the same method
+            try {
+                const response = await fetch(
+                    `${API_URL}/stat?from=${encodedFrom}`,
+                    {
+                        method: "GET",
+                        mode: "cors"
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error("HTTP " + response.status);
+                }
+
+                const data = await response.json();
+
+                /*
+                 * Expected response:
+                 *
+                 * {
+                 *     "from": "discord",
+                 *     "count": 42
+                 * }
+                 */
+
+                document.getElementById("count").textContent =
+                    data.count ?? 0;
+
+            } catch (error) {
+                console.error("Could not get statistics:", error);
+
+                document.getElementById("count").textContent = "?";
+            }
+        }
+
+
+        const from = getFrom();
+
+        document.getElementById("from").textContent = from;
+
+        sendData(from);
+    </script>
+
+</body>
+</html>
