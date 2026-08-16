@@ -82,98 +82,111 @@
 
 <body>
 
-    <main class="container">
+<main class="container">
 
-        <h1>
-            You came from
-            <span class="from" id="from">...</span>
-        </h1>
+    <h1>
+        You came from
+        <span class="from" id="from">...</span>
+    </h1>
 
-        <p>
-            I am <strong>tiboblh</strong> and I'm doing an experiment.
-            <br>
-            I'm testing every way I can think of to get people to go to a website.
-        </p>
+    <p>
+        I am <strong>tiboblh</strong> and I'm doing an experiment.
+        <br>
+        I'm testing every way I can think of to get people to go to a website.
+    </p>
 
-        <div class="counter">
-            <span class="number loading" id="count">...</span>
-            person(s) came from the same method.
-        </div>
+    <div class="counter">
+        <span class="number loading" id="count">...</span>
+        person(s) came from the same method.
+    </div>
 
-    </main>
-
-
-    <script>
-        const API_URL =
-            "https://script.google.com/macros/s/AKfycbxNtRj1zVOSzhHT3ge2rtMiQT-3cK2vjbicMWRK1PExx8JwV_LQNuu5LRbC-QttASXUTg/exec";
+</main>
 
 
-        // Get ?from=...
-        const params = new URLSearchParams(window.location.search);
+<script>
 
-        // Always lowercase
-        const from = (params.get("from") || "unknown").toLowerCase();
-
-
-        // Display it
-        document.getElementById("from").textContent = from;
+const API_URL =
+    "https://script.google.com/macros/s/AKfycbxNtRj1zVOSzhHT3ge2rtMiQT-3cK2vjbicMWRK1PExx8JwV_LQNuu5LRbC-QttASXUTg/exec";
 
 
-        /*
-         * ADD VISIT
-         *
-         * We use an invisible image instead of fetch()
-         * because Google Apps Script redirects its response,
-         * which causes CORS problems from GitHub Pages.
-         */
+/*
+ * Get ?from=
+ */
 
-        const addRequest = new Image();
+const params = new URLSearchParams(
+    window.location.search
+);
 
-        addRequest.src =
-            API_URL +
-            "?action=add&from=" +
-            encodeURIComponent(from);
+const from = (
+    params.get("from") || "unknown"
+).toLowerCase();
 
 
-        /*
-         * GET STATISTICS
-         *
-         * JSONP avoids the CORS restriction.
-         */
-
-        function receiveStats(data) {
-
-            if (!data || !data.success) {
-                document.getElementById("count").textContent = "?";
-                return;
-            }
-
-            const countElement =
-                document.getElementById("count");
-
-            countElement.textContent = data.count;
-            countElement.classList.remove("loading");
-        }
+document.getElementById("from").textContent = from;
 
 
-        const statsScript =
-            document.createElement("script");
+/*
+ * Listen for the response from Apps Script.
+ */
 
-        statsScript.src =
-            API_URL +
-            "?action=stat" +
-            "&from=" +
-            encodeURIComponent(from) +
-            "&callback=receiveStats";
+window.addEventListener("message", function(event) {
+
+    if (!event.data) {
+        return;
+    }
+
+    if (event.data.type !== "tiboblh-stats") {
+        return;
+    }
+
+    const data = event.data.data;
+
+    if (!data || !data.success) {
+        document.getElementById("count").textContent = "?";
+        return;
+    }
+
+    const count = document.getElementById("count");
+
+    count.textContent = data.count;
+    count.classList.remove("loading");
+
+});
 
 
-        statsScript.onerror = function () {
-            document.getElementById("count").textContent = "?";
-        };
+/*
+ * ADD
+ *
+ * Image request doesn't care about CORS.
+ */
+
+const addRequest = new Image();
+
+addRequest.src =
+    API_URL +
+    "?action=add&from=" +
+    encodeURIComponent(from);
 
 
-        document.body.appendChild(statsScript);
-    </script>
+/*
+ * STAT
+ *
+ * We load Apps Script in an iframe.
+ * Apps Script sends the result back using postMessage().
+ */
+
+const iframe = document.createElement("iframe");
+
+iframe.style.display = "none";
+
+iframe.src =
+    API_URL +
+    "?action=stat&from=" +
+    encodeURIComponent(from);
+
+document.body.appendChild(iframe);
+
+</script>
 
 </body>
 </html>
