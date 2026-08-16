@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Where did you come from?</title>
+    <title>You came from...</title>
 
     <style>
         * {
@@ -14,60 +14,68 @@
         body {
             margin: 0;
             min-height: 100vh;
+
             display: flex;
             align-items: center;
             justify-content: center;
 
-            background:
-                radial-gradient(circle at 20% 20%, #242424 0%, transparent 35%),
-                radial-gradient(circle at 80% 80%, #1b1b1b 0%, transparent 35%),
-                #101010;
-
+            background: #101010;
             color: white;
+
             font-family: Arial, Helvetica, sans-serif;
         }
 
         .container {
-            width: min(90%, 650px);
+            width: min(90%, 700px);
             text-align: center;
         }
 
         h1 {
-            font-size: clamp(32px, 7vw, 60px);
-            margin: 0 0 20px;
+            font-size: clamp(35px, 7vw, 60px);
+            margin: 0 0 25px;
         }
 
         .from {
             color: #8ab4ff;
             font-weight: bold;
-            word-break: break-word;
+            overflow-wrap: anywhere;
         }
 
         p {
-            color: #bdbdbd;
+            color: #c0c0c0;
             font-size: 18px;
             line-height: 1.6;
         }
 
+        strong {
+            color: white;
+        }
+
         .counter {
-            margin-top: 35px;
-            padding: 18px 25px;
+            display: inline-block;
 
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 14px;
+            margin-top: 30px;
+            padding: 20px 30px;
 
-            font-size: 18px;
+            background: #181818;
+            border: 1px solid #292929;
+            border-radius: 15px;
+
+            color: #aaa;
         }
 
         .number {
-            font-size: 32px;
-            font-weight: bold;
+            display: block;
+
+            margin-bottom: 5px;
+
             color: #8ab4ff;
+            font-size: 38px;
+            font-weight: bold;
         }
 
         .loading {
-            color: #777;
+            color: #666;
         }
     </style>
 </head>
@@ -78,109 +86,93 @@
 
         <h1>
             You came from
-            <span class="from" id="from">somewhere</span>
+            <span class="from" id="from">...</span>
         </h1>
 
         <p>
+            I am <strong>tiboblh</strong> and I'm doing an experiment.
+            <br>
             I'm testing every way I can think of to get people to go to a website.
         </p>
 
         <div class="counter">
-            <div>
-                <span class="number" id="count">...</span>
-            </div>
-
-            <div>
-                person(s) came from the same method.
-            </div>
+            <span class="number loading" id="count">...</span>
+            person(s) came from the same method.
         </div>
 
     </main>
 
+
     <script>
-        /*
-         * PUT YOUR API URL HERE
-         *
-         * Example:
-         * https://script.google.com/macros/s/XXXXXXXX/exec
-         *
-         * Or your own domain:
-         * https://liengoogle.com
-         */
-        const API_URL = "https://script.google.com/macros/s/AKfycbxNtRj1zVOSzhHT3ge2rtMiQT-3cK2vjbicMWRK1PExx8JwV_LQNuu5LRbC-QttASXUTg/exec";
+        const API_URL =
+            "https://script.google.com/macros/s/AKfycbxNtRj1zVOSzhHT3ge2rtMiQT-3cK2vjbicMWRK1PExx8JwV_LQNuu5LRbC-QttASXUTg/exec";
 
 
-        function getFrom() {
-            const params = new URLSearchParams(window.location.search);
+        // Get ?from=...
+        const params = new URLSearchParams(window.location.search);
 
-            return params.get("from") || "unknown";
-        }
-
-
-        async function sendData(from) {
-            /*
-             * Encode the value so things like:
-             *
-             * ?from=Discord Server
-             * ?from=https://example.com
-             *
-             * don't break the URL.
-             */
-
-            const encodedFrom = encodeURIComponent(from);
-
-            // Add this visitor
-            try {
-                await fetch(`${API_URL}/add?from=${encodedFrom}`, {
-                    method: "GET",
-                    mode: "cors"
-                });
-            } catch (error) {
-                console.error("Could not send visitor:", error);
-            }
+        // Always lowercase
+        const from = (params.get("from") || "unknown").toLowerCase();
 
 
-            // Get the number of people using the same method
-            try {
-                const response = await fetch(
-                    `${API_URL}/stat?from=${encodedFrom}`,
-                    {
-                        method: "GET",
-                        mode: "cors"
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error("HTTP " + response.status);
-                }
-
-                const data = await response.json();
-
-                /*
-                 * Expected response:
-                 *
-                 * {
-                 *     "from": "discord",
-                 *     "count": 42
-                 * }
-                 */
-
-                document.getElementById("count").textContent =
-                    data.count ?? 0;
-
-            } catch (error) {
-                console.error("Could not get statistics:", error);
-
-                document.getElementById("count").textContent = "?";
-            }
-        }
-
-
-        const from = getFrom();
-
+        // Display it
         document.getElementById("from").textContent = from;
 
-        sendData(from);
+
+        /*
+         * ADD VISIT
+         *
+         * We use an invisible image instead of fetch()
+         * because Google Apps Script redirects its response,
+         * which causes CORS problems from GitHub Pages.
+         */
+
+        const addRequest = new Image();
+
+        addRequest.src =
+            API_URL +
+            "?action=add&from=" +
+            encodeURIComponent(from);
+
+
+        /*
+         * GET STATISTICS
+         *
+         * JSONP avoids the CORS restriction.
+         */
+
+        function receiveStats(data) {
+
+            if (!data || !data.success) {
+                document.getElementById("count").textContent = "?";
+                return;
+            }
+
+            const countElement =
+                document.getElementById("count");
+
+            countElement.textContent = data.count;
+            countElement.classList.remove("loading");
+        }
+
+
+        const statsScript =
+            document.createElement("script");
+
+        statsScript.src =
+            API_URL +
+            "?action=stat" +
+            "&from=" +
+            encodeURIComponent(from) +
+            "&callback=receiveStats";
+
+
+        statsScript.onerror = function () {
+            document.getElementById("count").textContent = "?";
+        };
+
+
+        document.body.appendChild(statsScript);
     </script>
 
 </body>
